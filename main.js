@@ -1,11 +1,11 @@
 const WHOICD11APIClient = require('./who_icd11_api_client');
 const JSONFileReader = require('./json_file_reader');
-const SQLGenerator = require('./sql_generator'); // Importa el nuevo módulo
+const SQLGenerator = require('./sql_generator');
 const config = require('./config');
 
 async function runDataLoader() {
     const apiClient = new WHOICD11APIClient();
-    const sqlGenerator = new SQLGenerator(config.OUTPUT_SQL_FILE); // Instancia el generador SQL
+    const sqlGenerator = new SQLGenerator(config.OUTPUT_SQL_FILE);
 
     try {
         console.log("--- Iniciando proceso de carga de datos maestros CIE-11 ---");
@@ -18,6 +18,7 @@ async function runDataLoader() {
         // -----------------------
 
         // Paso 1: Leer los códigos CIE-11 desde el archivo JSON
+        await sqlGenerator.clearOutputFile(); // Limpia el archivo de salida al inicio
         const cie11Codes = await JSONFileReader.readCodes(config.INPUT_CODES_FILE);
 
         if (cie11Codes.length === 0) {
@@ -32,9 +33,11 @@ async function runDataLoader() {
             const codeInfo = await apiClient.getStemIdByCode(code);
 
             if (codeInfo && codeInfo.stemId) {
-                const stemId = codeInfo.stemId.split('/').pop();
-
-                const diagnosisDetails = await apiClient.getDiagnosisDetailsById(stemId);
+                // ***** INICIO DE LA CORRECCIÓN *****
+                // Se elimina la línea que procesaba el stemId: const stemId = codeInfo.stemId.split('/').pop();
+                // Ahora, pasamos la URI completa directamente a la siguiente función.
+                const diagnosisDetails = await apiClient.getDiagnosisDetailsById(codeInfo.stemId);
+                // ***** FIN DE LA CORRECCIÓN *****
 
                 if (diagnosisDetails) {
                     // Genera la sentencia INSERT usando el esquema de la tabla y el ID de versión
